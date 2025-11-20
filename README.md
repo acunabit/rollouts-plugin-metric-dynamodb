@@ -25,7 +25,7 @@ flowchart TB
 
  subgraph AWS["AWS"]
 
-        DynamoDB[("DynamoDB Table<br>ArgoRolloutsAnalysisRuns")]
+        DynamoDB[("DynamoDB Table<br>KargoArgoRolloutsIntegration")]
 
   end
 
@@ -164,7 +164,7 @@ data:
 This plugin writes analysis run metadata to DynamoDB and polls for a `Result` attribute. An external system (in another cluster or AWS account) reads the request, performs validation, and writes the result back to DynamoDB.
 
 **Configuration Options:**
-- `table_name`: DynamoDB table name (default: `ArgoRolloutsAnalysisRuns`)
+- `table_name`: DynamoDB table name (default: `KargoArgoRolloutsIntegration`)
 - `region`: AWS region (default: `ap-southeast-2`)
 - `cluster_id`: Cluster identifier for multi-cluster coordination
 - `analysis_template`: Name of the analysis template
@@ -197,7 +197,7 @@ spec:
       provider:
         plugin:
           block/rollouts-plugin-distributed-analysis-runs:
-            table_name: ArgoRolloutsAnalysisRuns  # Optional, defaults to ArgoRolloutsAnalysisRuns
+            table_name: KargoArgoRolloutsIntegration  # Optional, defaults to KargoArgoRolloutsIntegration
             region: ap-southeast-2                # Optional, defaults to ap-southeast-2
             cluster_id: "cluster-1"               # Required: Cluster identifier
             analysis_template: "template name"    # Required: Template name

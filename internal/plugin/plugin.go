@@ -57,7 +57,7 @@ func (g *RpcPlugin) Run(analysisRun *v1alpha1.AnalysisRun, metric v1alpha1.Metri
 
 	// Default table name if not provided
 	if cfg.TableName == "" {
-		cfg.TableName = "ArgoRolloutsAnalysisRuns"
+		cfg.TableName = "KargoArgoRolloutsIntegration"
 	}
 
 	// Default region if not provided
