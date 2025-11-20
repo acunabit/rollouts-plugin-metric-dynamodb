@@ -1,15 +1,66 @@
 # rollouts-plugin-distributed-analysis-runs
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/squareup/rollouts-plugin-distributed-analysis-runs)](https://goreportcard.com/report/github.com/squareup/rollouts-plugin-distributed-analysis-runs)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/squareup/rollouts-plugin-distributed-analysis-runs/blob/master/LICENSE)
-
 **Distributed Analysis Execution via DynamoDB**
 
-The `rollouts-plugin-distributed-analysis-runs` is a DynamoDB plugin designed for use with the Argo Rollouts plugin system. This plugin **distributes the execution of analysis run tests** by using DynamoDB as a shared communication point. Analysis templates specified in the configuration are executed by the [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller), which writes the results back to DynamoDB, enabling distributed analysis execution across multiple Kubernetes clusters and AWS accounts.
+The `rollouts-plugin-distributed-analysis-runs` is a plugin designed for use with the Argo Rollouts plugin system. This plugin **distributes the execution of analysis run tests** by using DynamoDB as a shared communication point. Analysis templates specified in the configuration are executed by the [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller), which writes the results back to DynamoDB, enabling distributed analysis execution across multiple Kubernetes clusters and AWS accounts.
 
 ## Distributed Analysis Execution
 
 This plugin **distributes the execution of analysis run tests** by using DynamoDB as a shared communication point:
+
+```mermaid
+---
+config:
+  layout: fixed
+---
+flowchart TB
+
+ subgraph CP["Control Plane Cluster"]
+
+        Kargo["Kargo Control Plane"]
+
+        Plugin["Argo Rollouts<br>Distributed Analysis Runs Plugin"]
+
+  end
+
+ subgraph AWS["AWS"]
+
+        DynamoDB[("DynamoDB Table<br>ArgoRolloutsAnalysisRuns")]
+
+  end
+
+ subgraph TC["Target Cluster"]
+
+        Controller["block-kargo-test-controller"]
+
+        LocalAR["Local AnalysisRun"]
+
+        K8s["Kubernetes API"]
+
+        Jobs["Kubernetes Jobs"]
+
+  end
+
+    Kargo -- creates test request --> Plugin
+
+    Plugin -- writes/reads --> DynamoDB
+
+    Plugin -- reconciles results --> Kargo
+
+    Controller -- watches --> DynamoDB
+
+    Controller -- creates --> LocalAR
+
+    LocalAR -- creates jobs --> K8s
+
+    K8s -- schedules --> Jobs
+
+    Jobs -- results --> Controller
+
+    Controller -- reads/writes --> DynamoDB
+```
+
+### Workflow Phases
 
 1. **Write Phase**: The plugin writes analysis run metadata (AnalysisRunUid, AnalysisTemplate, ClusterID, Namespace) to DynamoDB
 2. **Execution Phase**: The [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller) reads the analysis request from DynamoDB and executes the specified analysis template
