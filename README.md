@@ -3,20 +3,43 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/argoproj-labs/rollouts-plugin-metric-dynamodb)](https://goreportcard.com/report/github.com/argoproj-labs/rollouts-plugin-metric-dynamodb)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/argoproj-labs/rollouts-plugin-metric-dynamodb/blob/master/LICENSE)
 
-The `rollouts-plugin-metric-dynamodb` is an dynamodb plugin designed for use with the Argo Rollouts plugin system. This plugin enables the integration of dynamodb metrics into Argo Rollouts, allowing for advanced metric analysis and monitoring during application rollouts.
+**Distributed Analysis Execution via DynamoDB**
+
+The `rollouts-plugin-metric-dynamodb` is a DynamoDB plugin designed for use with the Argo Rollouts plugin system. This plugin **distributes the execution of analysis run tests** by using DynamoDB as a shared communication point. Analysis templates specified in the configuration are executed by the [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller), which writes the results back to DynamoDB, enabling distributed analysis execution across multiple Kubernetes clusters and AWS accounts.
+
+## Distributed Analysis Execution
+
+This plugin **distributes the execution of analysis run tests** by using DynamoDB as a shared communication point:
+
+1. **Write Phase**: The plugin writes analysis run metadata (AnalysisRunUid, AnalysisTemplate, ClusterID, Namespace) to DynamoDB
+2. **Execution Phase**: The [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller) reads the analysis request from DynamoDB and executes the specified analysis template
+3. **Result Phase**: The controller writes the `Result` attribute back to DynamoDB
+4. **Poll Phase**: The plugin polls DynamoDB for the `Result` attribute
+5. **Evaluation Phase**: When `Result` is set, the plugin evaluates:
+   - `Result == "Passed"` → Analysis succeeds
+   - `Result != "Passed"` → Analysis fails
+
+### Execution Controller
+
+The analysis templates specified in the plugin configuration are executed by the **[block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller)**. This controller:
+
+- Monitors DynamoDB for new analysis run requests
+- Executes the specified analysis templates
+- Writes the test results back to DynamoDB as the `Result` attribute
+- Enables distributed execution of analysis tests across clusters
 
 > [!IMPORTANT]
-> The dynamodb Metric Plugin relies on aggregation query results to function correctly. Aggregation queries in dynamodb allow for the computation of metrics, such as averages, sums, and counts, over a set of documents. This plugin specifically requires the presence of an aggregation block in the query results to operate. If the query results do not contain an aggregation block, the plugin will be unable to process the data and will not function as intended. Therefore, it is essential to ensure that all queries used with this plugin include the necessary aggregation blocks to enable accurate metric analysis and monitoring.
+> This plugin uses DynamoDB as a **distributed communication point** for multi-cluster scenarios. Analysis templates are executed by the block-kargo-test-controller, which reads requests from DynamoDB and writes results back, enabling distributed analysis execution across multiple Kubernetes clusters and AWS accounts.
 
 ## Features
 
-- **Metric Integration:** Seamlessly integrates dynamodb metrics with Argo Rollouts.
-
-- **Custom Queries:** Supports custom dynamodb queries for flexible metric retrieval.
-
-- **Error Handling:** Robust error handling to ensure reliable metric collection.
-
-- **Debugging Support:** Provides options for building debug versions and attaching debuggers.
+- **Multi-Cluster Coordination:** Uses DynamoDB as a distributed communication point for cross-cluster analysis runs
+- **Polling Mechanism:** Polls DynamoDB for result status until completion or timeout
+- **IRSA Support:** Automatically uses IAM Roles for Service Accounts (IRSA) for AWS authentication
+- **Configurable Polling:** Customizable poll interval and timeout settings
+- **Default Values:** Sensible defaults for table name and AWS region
+- **Error Handling:** Robust error handling to ensure reliable operation
+- **Debugging Support:** Provides options for building debug versions and attaching debuggers
 
 ## Build & Debug
 
@@ -88,110 +111,89 @@ data:
 
 ### Sample Analysis Template
 
-The `successCondition` checks that the error count in the last 5 minutes should be lower than or equal to the error count in the previous 5 minutes.
+This plugin writes analysis run metadata to DynamoDB and polls for a `Result` attribute. An external system (in another cluster or AWS account) reads the request, performs validation, and writes the result back to DynamoDB.
 
-> [!TIP]
-> Note: The fields `successCondition`, `"gte": "now-10m/m"`, `"fixed_interval": "5m"`, and `"Level": "Error"` can be configured by your check actions. For example, if you want to check the **"Warning"** log count over the last 15 minutes, you can adjust these fields accordingly: set `"gte": "now-30m/m"`, `"fixed_interval": "15m"`, and `"Level": "Warning"`.
+**Configuration Options:**
+- `table_name`: DynamoDB table name (default: `ArgoRolloutsAnalysisRuns`)
+- `region`: AWS region (default: `ap-southeast-2`)
+- `cluster_id`: Cluster identifier for multi-cluster coordination
+- `analysis_template`: Name of the analysis template
+- `namespace`: Kubernetes namespace
+- `poll_interval`: Polling interval in seconds (default: 5)
+- `poll_timeout`: Polling timeout in seconds (default: 300)
 
-An example for this sample plugin below.
+**How it works:**
+1. Plugin writes entry to DynamoDB with `AnalysisRunUid`, `AnalysisTemplate`, `ClusterID`, `Namespace`
+2. [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller) reads the request and executes the specified `AnalysisTemplate`
+3. Controller writes the `Result` attribute back to DynamoDB
+4. Plugin polls DynamoDB for `Result` attribute
+5. When `Result` is set:
+   - `Result == "Passed"` → Analysis succeeds
+   - `Result != "Passed"` → Analysis fails with error
 
-```
+An example Analysis Template:
+
+```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
-  name: success-rate
+  name: multicluster-test
 spec:
-  args:
-    - name: service-name
   metrics:
-    - name: success-rate
-      interval: 10s
-      successCondition: result[len(result)-1] <= result[len(result)-2]
-      failureLimit: 2
-      count: 3
+    - name: multicluster-test
+      interval: 30s
+      failureLimit: 3
+      count: 5
       provider:
         plugin:
-          argoproj-labs/dynamodb-metric-plugin:
-            address: http://localhost:9200/
-            username: foo
-            password: bar
-            insecureSkipVerify: false
-            index: sample-index
-            query: |
-              {
-                "size": 0,
-                "query": {
-                  "range": {
-                    "@timestamp": {
-                      "gte": "now-10m/m",
-                      "lt": "now/m"
-                    }
-                  }
-                },
-                "aggs": {
-                  "logs_per_5min": {
-                    "date_histogram": {
-                      "field": "@timestamp",
-                      "fixed_interval": "5m"
-                    },
-                    "aggs": {
-                      "error_logs": {
-                        "filter": {
-                          "term": {
-                            "Level": "Error"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+          block/rollouts-plugin-distributed-analysis-runs:
+            table_name: ArgoRolloutsAnalysisRuns  # Optional, defaults to ArgoRolloutsAnalysisRuns
+            region: ap-southeast-2                # Optional, defaults to ap-southeast-2
+            cluster_id: "cluster-1"               # Required: Cluster identifier
+            analysis_template: "template name"    # Required: Template name
+            namespace: "kargo-demo"               # Required: Kubernetes namespace
+            poll_interval: 5                      # Optional, defaults to 5 seconds
+            poll_timeout: 300                     # Optional, defaults to 300 seconds
 ```
 
-### Sample Analysis Result
+### Distributed Execution Workflow
 
-dynamodb query should response like below:
+1. **Cluster A** (Argo Rollouts): Plugin writes analysis request to DynamoDB with `AnalysisTemplate`, `ClusterID`, `Namespace`, and `AnalysisRunUid`
+2. **block-kargo-test-controller** (running in any cluster/account):
+   - Monitors DynamoDB for new analysis requests
+   - Reads the request using `AnalysisRunUid` and `ClusterID`
+   - Executes the specified `AnalysisTemplate`
+   - Writes `Result = "Passed"` or `Result = "Failed"` back to DynamoDB
+3. **Cluster A**: Plugin polls DynamoDB and reads the result, then succeeds or fails accordingly
 
-```
+This enables **distributed analysis execution** where analysis templates are executed by the block-kargo-test-controller, which can run in a different cluster or AWS account from where the Argo Rollouts analysis run was initiated.
+
+### DynamoDB Table Schema
+
+The plugin expects a DynamoDB table with the following schema:
+
+**Partition Key:** `AnalysisRunUid` (String)  
+**Sort Key:** `ClusterID` (String)
+
+**Attributes:**
+- `AnalysisRunUid`: Unique identifier for the analysis run (from Kubernetes UID)
+- `ClusterID`: Cluster identifier for multi-cluster coordination
+- `AnalysisTemplate`: Name of the analysis template
+- `Namespace`: Kubernetes namespace
+- `Timestamp`: RFC3339 timestamp when the entry was created
+- `Result`: Result of the analysis (set by [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller))
+  - `"Passed"` → Analysis succeeds
+  - Any other value → Analysis fails
+
+**Example DynamoDB Item:**
+```json
 {
-  "took": 2057,
-  "timed_out": false,
-  "_shards": {
-    "total": 1,
-    "successful": 1,
-    "skipped": 0,
-    "failed": 0
-  },
-  "hits": {
-    "total": {
-      "value": 10000,
-      "relation": "gte"
-    },
-    "max_score": null,
-    "hits": []
-  },
-  "aggregations": {
-    "logs_per_5min": {
-      "buckets": [
-        {
-          "key_as_string": "2024-10-25T14:00:00.000Z",
-          "key": 1729864800000,
-          "doc_count": 523779,
-          "error_logs": {
-            "doc_count": 0
-          }
-        },
-        {
-          "key_as_string": "2024-10-25T14:05:00.000Z",
-          "key": 1729865100000,
-          "doc_count": 343716,
-          "error_logs": {
-            "doc_count": 0
-          }
-        }
-      ]
-    }
-  }
+  "AnalysisRunUid": "01kaavwrj616n4hva5ng54advn.e945066",
+  "ClusterID": "cluster-1",
+  "AnalysisTemplate": "dynamodb-multicluster-test",
+  "Namespace": "kargo-demo",
+  "Timestamp": "2025-11-18T06:55:13Z",
+  "Result": "Passed"
 }
 ```
 
