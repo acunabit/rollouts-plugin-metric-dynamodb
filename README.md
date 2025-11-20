@@ -99,13 +99,13 @@ To build the plugin, use the following commands:
 ### Release Build
 
 ```bash
-make build-rollouts-plugin-metric-dynamodb
+make build-rollouts-plugin-distributed-analysis-runs
 ```
 
 ### Debug Build
 
 ```bash
-make build-rollouts-plugin-metric-dynamodb-debug
+make build-rollouts-plugin-distributed-analysis-runs-debug
 ```
 
 ### Attaching a debugger to debug build
@@ -138,7 +138,7 @@ metadata:
 data:
   plugins: |-
     metrics:
-    - name: "argoproj-labs/dynamodb-metric-plugin" # name of the plugin uses the name to find this configuration, it must match the name required by the plugin
+    - name: "block/rollouts-plugin-distributed-analysis-runs" # name of the plugin uses the name to find this configuration, it must match the name required by the plugin
       location: "file://./my-custom-plugin" # supports http(s):// urls and file://
 ```
 
@@ -155,9 +155,8 @@ metadata:
 data:
   plugins: |-
     metrics:
-    - name: "argoproj-labs/dynamodb-metric-plugin" # name of the plugin uses the name to find this configuration, it must match the name required by the plugin
-      location: "https://github.com/squareup/rollouts-plugin-distributed-analysis-runs/releases/download/v0.0.5/rollouts-plugin-metric-dynamodb-linux-amd64" # supports http(s):// urls and file://
-      sha256: "08f588b1c799a37bbe8d0fc74cc1b1492dd70b2c" #optional sha256 checksum of the plugin executable
+    - name: "block/rollouts-plugin-distributed-analysis-runs" # name of the plugin uses the name to find this configuration, it must match the name required by the plugin
+      location: "https://github.com/squareup/rollouts-plugin-distributed-analysis-runs/releases/download/v0.0.1/rollouts-plugin-distributed-analysis-runs-linux-amd64" # supports http(s):// urls and file://
 ```
 
 ### Sample Analysis Template
@@ -247,7 +246,3 @@ The plugin expects a DynamoDB table with the following schema:
   "Result": "Passed"
 }
 ```
-
-## Credit
-
-The development of this plugin was inspired by the [Argo Rollouts Prometheus Metric Plugin](https://github.com/argoproj-labs/rollouts-plugin-metric-sample-prometheus). Leveraging the knowledge and design principles from the Prometheus plugin, this dynamodb Metric Plugin was created to provide similar functionality for dynamodb metrics. The foundational concepts and architecture were adapted to suit the specific requirements and capabilities of dynamodb, ensuring seamless integration and reliable performance within the Argo Rollouts ecosystem.

@@ -50,7 +50,7 @@ func (g *RpcPlugin) Run(analysisRun *v1alpha1.AnalysisRun, metric v1alpha1.Metri
 	}
 
 	cfg := Config{}
-	err := json.Unmarshal(metric.Provider.Plugin["argoproj-labs/dynamodb-metric-plugin"], &cfg)
+	err := json.Unmarshal(metric.Provider.Plugin["block/rollouts-plugin-distributed-analysis-runs"], &cfg)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}

@@ -146,7 +146,7 @@ func TestRunIteration(t *testing.T) {
 
 	runMeasurement := plugin.Run(&v1alpha1.AnalysisRun{}, v1alpha1.Metric{
 		Provider: v1alpha1.MetricProvider{
-			Plugin: map[string]json.RawMessage{"argoproj-labs/dynamodb-metric-plugin": json.RawMessage(jsonStr)},
+			Plugin: map[string]json.RawMessage{"block/rollouts-plugin-distributed-analysis-runs": json.RawMessage(jsonStr)},
 		},
 		SuccessCondition: "result[len(result)-1] <= result[len(result)-2]",
 	})
