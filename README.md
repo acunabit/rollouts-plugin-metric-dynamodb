@@ -1,11 +1,11 @@
-# rollouts-plugin-metric-dynamodb
+# rollouts-plugin-distributed-analysis-runs
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/argoproj-labs/rollouts-plugin-metric-dynamodb)](https://goreportcard.com/report/github.com/argoproj-labs/rollouts-plugin-metric-dynamodb)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/argoproj-labs/rollouts-plugin-metric-dynamodb/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/squareup/rollouts-plugin-distributed-analysis-runs)](https://goreportcard.com/report/github.com/squareup/rollouts-plugin-distributed-analysis-runs)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/squareup/rollouts-plugin-distributed-analysis-runs/blob/master/LICENSE)
 
 **Distributed Analysis Execution via DynamoDB**
 
-The `rollouts-plugin-metric-dynamodb` is a DynamoDB plugin designed for use with the Argo Rollouts plugin system. This plugin **distributes the execution of analysis run tests** by using DynamoDB as a shared communication point. Analysis templates specified in the configuration are executed by the [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller), which writes the results back to DynamoDB, enabling distributed analysis execution across multiple Kubernetes clusters and AWS accounts.
+The `rollouts-plugin-distributed-analysis-runs` is a DynamoDB plugin designed for use with the Argo Rollouts plugin system. This plugin **distributes the execution of analysis run tests** by using DynamoDB as a shared communication point. Analysis templates specified in the configuration are executed by the [block-kargo-test-controller](https://github.com/squareup/block-kargo-test-controller), which writes the results back to DynamoDB, enabling distributed analysis execution across multiple Kubernetes clusters and AWS accounts.
 
 ## Distributed Analysis Execution
 
@@ -105,7 +105,7 @@ data:
   plugins: |-
     metrics:
     - name: "argoproj-labs/dynamodb-metric-plugin" # name of the plugin uses the name to find this configuration, it must match the name required by the plugin
-      location: "https://github.com/argoproj-labs/rollouts-plugin-metric-dynamodb/releases/download/v0.0.1/rollouts-plugin-metric-dynamodb-linux-amd64" # supports http(s):// urls and file://
+      location: "https://github.com/squareup/rollouts-plugin-distributed-analysis-runs/releases/download/v0.0.5/rollouts-plugin-metric-dynamodb-linux-amd64" # supports http(s):// urls and file://
       sha256: "08f588b1c799a37bbe8d0fc74cc1b1492dd70b2c" #optional sha256 checksum of the plugin executable
 ```
 

@@ -1,4 +1,4 @@
-module github.com/argoproj-labs/rollouts-plugin-metric-dynamodb
+module github.com/squareup/rollouts-plugin-distributed-analysis-runs
 
 go 1.21
 

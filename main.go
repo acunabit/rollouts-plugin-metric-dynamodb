@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/argoproj-labs/rollouts-plugin-metric-dynamodb/internal/plugin"
 	rolloutsPlugin "github.com/argoproj/argo-rollouts/metricproviders/plugin/rpc"
 	goPlugin "github.com/hashicorp/go-plugin"
 	log "github.com/sirupsen/logrus"
+	"github.com/squareup/rollouts-plugin-distributed-analysis-runs/internal/plugin"
 )
 
 // handshakeConfigs are used to just do a basic handshake between
